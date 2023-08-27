@@ -6,26 +6,37 @@ using SqlKata.Extensions;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query? Parent;
+        public QueryBuilder? Parent;
         public string? EngineScope;
         private bool _notFlag;
 
         private bool _orFlag;
 
-        public List<AbstractClause> Clauses { get; set; } = new();
+        public List<AbstractClauseBuilder> Clauses { get; set; } = new();
 
         private static readonly ConcurrentDictionary<Type, PropertyInfo[]> CacheDictionaryProperties = new();
 
         private string? _comment;
-        public List<Include> Includes = new();
+        public List<IncludeBuilder> Includes = new();
         public Dictionary<string, object?> Variables = new();
         public bool IsDistinct { get; set; }
         // Mandatory for CTE queries
         public string? QueryAlias { get; set; }
         public string Method { get; set; } = "select";
-        public Query SetEngineScope(string? engine)
+
+        
+        public Query Build()
+        {
+            return new Query
+            {
+                QueryAlias = QueryAlias,
+                Method = Method
+            };
+        }
+
+        public QueryBuilder SetEngineScope(string? engine)
         {
             EngineScope = engine;
 
@@ -33,26 +44,26 @@ namespace SqlKata
         }
 
 
-        public Query SetParent(Query? parent)
+        public QueryBuilder SetParent(QueryBuilder? parent)
         {
             if (this == parent)
-                throw new ArgumentException($"Cannot set the same {nameof(Query)} as a parent of itself");
+                throw new ArgumentException($"Cannot set the same {nameof(QueryBuilder)} as a parent of itself");
 
             Parent = parent;
             return this;
         }
 
-        public Query NewChild()
+        public QueryBuilder NewChild()
         {
-            var newQuery = new Query().SetParent(this);
+            var newQuery = new QueryBuilder().SetParent(this);
             newQuery.EngineScope = EngineScope;
             return newQuery;
         }
 
         /// <summary>
-        ///     Add a component clause to the query.
+        ///     Add a component clause to the QueryBuilder.
         /// </summary>
-        public Query AddComponent(AbstractClause clause)
+        public QueryBuilder AddComponent(AbstractClauseBuilder clause)
         {
             Debug.Assert(clause.Component != null);
             Clauses.Add(clause);
@@ -61,13 +72,13 @@ namespace SqlKata
         }
 
         /// <summary>
-        ///     If the query already contains a clause for the given component
+        ///     If the QueryBuilder already contains a clause for the given component
         ///     and engine, replace it with the specified clause. Otherwise, just
         ///     add the clause.
         /// </summary>
         /// <param name="clause"></param>
         /// <returns></returns>
-        public Query AddOrReplaceComponent(AbstractClause clause)
+        public QueryBuilder AddOrReplaceComponent(AbstractClauseBuilder clause)
         {
             var countRemoved = Clauses.RemoveAll(
                 c => c.Component == clause.Component &&
@@ -107,7 +118,7 @@ namespace SqlKata
         }
 
         /// <summary>
-        ///     Get a single component clause from the query.
+        ///     Get a single component clause from the QueryBuilder.
         /// </summary>
         /// <returns></returns>
         public TC? GetOneComponent<TC>(string component, string? engineCode = null) where TC : AbstractClause
@@ -120,7 +131,7 @@ namespace SqlKata
         }
 
         /// <summary>
-        ///     Get a single component clause from the query.
+        ///     Get a single component clause from the QueryBuilder.
         /// </summary>
         /// <param name="component"></param>
         /// <param name="engineCode"></param>
@@ -133,7 +144,7 @@ namespace SqlKata
         }
 
         /// <summary>
-        ///     Return whether the query has clauses for a component.
+        ///     Return whether the QueryBuilder has clauses for a component.
         /// </summary>
         /// <param name="component"></param>
         /// <param name="engineCode"></param>
@@ -151,7 +162,7 @@ namespace SqlKata
         /// <param name="component"></param>
         /// <param name="engineCode"></param>
         /// <returns></returns>
-        public Query RemoveComponent(string component, string? engineCode = null)
+        public QueryBuilder RemoveComponent(string component, string? engineCode = null)
         {
             engineCode ??= EngineScope;
 
@@ -167,7 +178,7 @@ namespace SqlKata
         ///     Set the next boolean operator to "and" for the "where" clause.
         /// </summary>
         /// <returns></returns>
-        public Query And()
+        public QueryBuilder And()
         {
             _orFlag = false;
             return this;
@@ -177,7 +188,7 @@ namespace SqlKata
         ///     Set the next boolean operator to "or" for the "where" clause.
         /// </summary>
         /// <returns></returns>
-        public Query Or()
+        public QueryBuilder Or()
         {
             _orFlag = true;
             return this;
@@ -187,7 +198,7 @@ namespace SqlKata
         ///     Set the next "not" operator for the "where" clause.
         /// </summary>
         /// <returns></returns>
-        public Query Not(bool flag = true)
+        public QueryBuilder Not(bool flag = true)
         {
             _notFlag = flag;
             return this;
@@ -224,18 +235,18 @@ namespace SqlKata
         /// </summary>
         /// <param name="table"></param>
         /// <returns></returns>
-        public Query From(GTable table)
+        public QueryBuilder From(GTable table)
         {
-            return AddOrReplaceComponent(new FromClause
+            return AddOrReplaceComponent(new FromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "from",
                 Table = table.Name
             });
         }
-        public Query From(string table)
+        public QueryBuilder From(string table)
         {
-            return AddOrReplaceComponent(new FromClause
+            return AddOrReplaceComponent(new FromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "from",
@@ -243,27 +254,27 @@ namespace SqlKata
             });
         }
 
-        public Query From(Query query, string? alias = null)
+        public QueryBuilder From(QueryBuilder QueryBuilder, string? alias = null)
         {
-            query = query.Clone();
-            query.SetParent(this);
+            QueryBuilder = QueryBuilder.Clone();
+            QueryBuilder.SetParent(this);
 
-            if (alias != null) query.As(alias);
+            if (alias != null) QueryBuilder.As(alias);
 
 
-            return AddOrReplaceComponent(new QueryFromClause
+            return AddOrReplaceComponent(new QueryFromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "from",
-                Query = query
+                Query = QueryBuilder
             });
         }
 
-        public Query FromRaw(string sql, params object[] bindings)
+        public QueryBuilder FromRaw(string sql, params object[] bindings)
         {
             ArgumentNullException.ThrowIfNull(sql);
             ArgumentNullException.ThrowIfNull(bindings);
-            return AddOrReplaceComponent(new RawFromClause
+            return AddOrReplaceComponent(new RawFromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "from",
@@ -272,13 +283,13 @@ namespace SqlKata
             });
         }
 
-        public Query From(Func<Query, Query> callback, string? alias = null)
+        public QueryBuilder From(Func<QueryBuilder, QueryBuilder> callback, string? alias = null)
         {
-            var query = new Query();
+            var queryBuilder = new QueryBuilder();
 
-            query.SetParent(this);
+            queryBuilder.SetParent(this);
 
-            return From(callback.Invoke(query), alias);
+            return From(callback.Invoke(queryBuilder), alias);
         }
     }
 }

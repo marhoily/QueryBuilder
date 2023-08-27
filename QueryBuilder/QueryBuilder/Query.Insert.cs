@@ -2,16 +2,16 @@ using System.Collections.Immutable;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query AsInsert(object data, bool returnId = false)
+        public QueryBuilder AsInsert(object data, bool returnId = false)
         {
             var propertiesKeyValues = BuildKeyValuePairsFromObject(data);
 
             return AsInsert(propertiesKeyValues, returnId);
         }
 
-        public Query AsInsert(IEnumerable<string> columns, IEnumerable<object?> values)
+        public QueryBuilder AsInsert(IEnumerable<string> columns, IEnumerable<object?> values)
         {
             ArgumentNullException.ThrowIfNull(columns);
             ArgumentNullException.ThrowIfNull(values);
@@ -27,7 +27,7 @@ namespace SqlKata
 
             Method = "insert";
 
-            RemoveComponent("insert").AddComponent(new InsertClause
+            RemoveComponent("insert").AddComponent(new InsertClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "insert",
@@ -39,7 +39,7 @@ namespace SqlKata
             return this;
         }
 
-        public Query AsInsert(IEnumerable<KeyValuePair<string, object?>> values, bool returnId = false)
+        public QueryBuilder AsInsert(IEnumerable<KeyValuePair<string, object?>> values, bool returnId = false)
         {
             var valuesCached = values is IReadOnlyDictionary<string, object?> d
                 ? d
@@ -49,7 +49,7 @@ namespace SqlKata
 
             Method = "insert";
 
-            RemoveComponent("insert").AddComponent(new InsertClause
+            RemoveComponent("insert").AddComponent(new InsertClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "insert",
@@ -68,7 +68,7 @@ namespace SqlKata
         /// <param name="columns"></param>
         /// <param name="rowsValues"></param>
         /// <returns></returns>
-        public Query AsInsert(IEnumerable<string> columns, IEnumerable<IEnumerable<object?>> rowsValues)
+        public QueryBuilder AsInsert(IEnumerable<string> columns, IEnumerable<IEnumerable<object?>> rowsValues)
         {
             var columnsList = columns is ImmutableArray<string> l ? l : columns.ToImmutableArray();
             var valuesCollectionList = rowsValues is IReadOnlyList<ImmutableArray<object?>> r
@@ -93,7 +93,7 @@ namespace SqlKata
                     throw new InvalidOperationException(
                         $"{nameof(columns)} count should be equal to each {nameof(rowsValues)} entry count");
 
-                AddComponent(new InsertClause
+                AddComponent(new InsertClauseBuilder
                 {
                     Engine = EngineScope,
                     Component = "insert",
@@ -113,11 +113,11 @@ namespace SqlKata
         /// <param name="columns"></param>
         /// <param name="query"></param>
         /// <returns></returns>
-        public Query AsInsert(IEnumerable<string> columns, Query query)
+        public QueryBuilder AsInsert(IEnumerable<string> columns, QueryBuilder query)
         {
             Method = "insert";
 
-            RemoveComponent("insert").AddComponent(new InsertQueryClause
+            RemoveComponent("insert").AddComponent(new InsertQueryClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "insert",

@@ -2,16 +2,16 @@ using System.Collections.Immutable;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query AsUpdate(object data)
+        public QueryBuilder AsUpdate(object data)
         {
             var dictionary = BuildKeyValuePairsFromObject(data, true);
 
             return AsUpdate(dictionary);
         }
 
-        public Query AsUpdate(IEnumerable<string> columns, IEnumerable<object?> values)
+        public QueryBuilder AsUpdate(IEnumerable<string> columns, IEnumerable<object?> values)
         {
             var columnsCache = columns is ImmutableArray<string> c ? c : columns.ToImmutableArray();
             var valuesCache = values is ImmutableArray<object?> v ? v : values.ToImmutableArray();
@@ -23,7 +23,7 @@ namespace SqlKata
 
             Method = "update";
 
-            RemoveComponent("update").AddComponent(new InsertClause
+            RemoveComponent("update").AddComponent(new InsertClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "update",
@@ -35,7 +35,7 @@ namespace SqlKata
             return this;
         }
 
-        public Query AsUpdate(IEnumerable<KeyValuePair<string, object?>> values)
+        public QueryBuilder AsUpdate(IEnumerable<KeyValuePair<string, object?>> values)
         {
             var valuesCached = values is IReadOnlyDictionary<string, object?> d
                 ? d
@@ -45,7 +45,7 @@ namespace SqlKata
 
             Method = "update";
 
-            RemoveComponent("update").AddComponent(new InsertClause
+            RemoveComponent("update").AddComponent(new InsertClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "update",
@@ -57,10 +57,10 @@ namespace SqlKata
             return this;
         }
 
-        public Query AsIncrement(string column, int value = 1)
+        public QueryBuilder AsIncrement(string column, int value = 1)
         {
             Method = "update";
-            AddOrReplaceComponent(new IncrementClause
+            AddOrReplaceComponent(new IncrementClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "update",
@@ -74,7 +74,7 @@ namespace SqlKata
             return this;
         }
 
-        public Query AsDecrement(string column, int value = 1)
+        public QueryBuilder AsDecrement(string column, int value = 1)
         {
             return AsIncrement(column, -value);
         }

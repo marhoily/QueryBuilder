@@ -3,19 +3,17 @@ using System.Reflection;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-
-        public Query()
+        public QueryBuilder()
         {
         }
 
-        public Query(string table, string? comment = null)
+        public QueryBuilder(string table, string? comment = null)
         {
             From(table);
             Comment(comment);
         }
-
 
         public string GetComment()
         {
@@ -48,9 +46,9 @@ namespace SqlKata
             return limit?.Limit ?? 0;
         }
 
-        public virtual Query Clone()
+        public virtual QueryBuilder Clone()
         {
-            var clone = new Query();
+            var clone = new QueryBuilder();
             clone.Clauses = Clauses.ToList();
             clone.Parent = Parent;
             clone.QueryAlias = QueryAlias;
@@ -61,7 +59,7 @@ namespace SqlKata
             return clone;
         }
 
-        public Query As(string alias)
+        public QueryBuilder As(string alias)
         {
             QueryAlias = alias;
             return this;
@@ -72,13 +70,13 @@ namespace SqlKata
         /// </summary>
         /// <param name="comment">The comment.</param>
         /// <returns></returns>
-        public Query Comment(string? comment)
+        public QueryBuilder Comment(string? comment)
         {
             _comment = comment;
             return this;
         }
 
-        public Query For(string engine, Func<Query, Query> fn)
+        public QueryBuilder For(string engine, Func<QueryBuilder, QueryBuilder> fn)
         {
             EngineScope = engine;
 
@@ -90,7 +88,7 @@ namespace SqlKata
             return result;
         }
 
-        public Query With(Query query)
+        public QueryBuilder With(QueryBuilder query)
         {
             // Clear query alias and add it to the containing clause
             if (string.IsNullOrWhiteSpace(query.QueryAlias))
@@ -103,7 +101,7 @@ namespace SqlKata
             // clear the query alias
             query.QueryAlias = null;
 
-            return AddComponent(new QueryFromClause
+            return AddComponent(new QueryFromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "cte",
@@ -112,25 +110,25 @@ namespace SqlKata
             });
         }
 
-        public Query With(Func<Query, Query> fn)
+        public QueryBuilder With(Func<QueryBuilder, QueryBuilder> fn)
         {
-            return With(fn.Invoke(new Query()));
+            return With(fn.Invoke(new QueryBuilder()));
         }
 
-        public Query With(string alias, Query query)
+        public QueryBuilder With(string alias, QueryBuilder query)
         {
             return With(query.As(alias));
         }
 
-        public Query With(string alias, Func<Query, Query> fn)
+        public QueryBuilder With(string alias, Func<QueryBuilder, QueryBuilder> fn)
         {
-            return With(alias, fn.Invoke(new Query()));
+            return With(alias, fn.Invoke(new QueryBuilder()));
         }
 
         /// <summary>
         ///     Constructs an ad-hoc table of the given data as a CTE.
         /// </summary>
-        public Query With(string alias, IEnumerable<string> columns, IEnumerable<IEnumerable<object?>> valuesCollection)
+        public QueryBuilder With(string alias, IEnumerable<string> columns, IEnumerable<IEnumerable<object?>> valuesCollection)
         {
             ArgumentNullException.ThrowIfNull(alias);
             ArgumentNullException.ThrowIfNull(columns);
@@ -146,7 +144,7 @@ namespace SqlKata
             if (values.Any(row => row.Count != col.Length))
                 throw new InvalidOperationException("Columns count should be equal to each Values count");
 
-            return AddComponent(new AdHocTableFromClause
+            return AddComponent(new AdHocTableFromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "cte",
@@ -156,12 +154,12 @@ namespace SqlKata
             });
         }
 
-        public Query WithRaw(string alias, string sql, params object[] bindings)
+        public QueryBuilder WithRaw(string alias, string sql, params object[] bindings)
         {
             ArgumentNullException.ThrowIfNull(alias);
             ArgumentNullException.ThrowIfNull(sql);
             ArgumentNullException.ThrowIfNull(bindings);
-            return AddComponent(new RawFromClause
+            return AddComponent(new RawFromClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "cte",
@@ -171,9 +169,9 @@ namespace SqlKata
             });
         }
 
-        public Query Limit(int value)
+        public QueryBuilder Limit(int value)
         {
-            return AddOrReplaceComponent(new LimitClause
+            return AddOrReplaceComponent(new LimitClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "limit",
@@ -181,9 +179,9 @@ namespace SqlKata
             });
         }
 
-        public Query Offset(long value)
+        public QueryBuilder Offset(long value)
         {
-            return AddOrReplaceComponent(new OffsetClause
+            return AddOrReplaceComponent(new OffsetClauseBuilder
             {
                 Engine = EngineScope,
                 Component = "offset",
@@ -191,7 +189,7 @@ namespace SqlKata
             });
         }
 
-        public Query Offset(int value)
+        public QueryBuilder Offset(int value)
         {
             return Offset((long)value);
         }
@@ -201,7 +199,7 @@ namespace SqlKata
         /// </summary>
         /// <param name="limit"></param>
         /// <returns></returns>
-        public Query Take(int limit)
+        public QueryBuilder Take(int limit)
         {
             return Limit(limit);
         }
@@ -211,7 +209,7 @@ namespace SqlKata
         /// </summary>
         /// <param name="offset"></param>
         /// <returns></returns>
-        public Query Skip(int offset)
+        public QueryBuilder Skip(int offset)
         {
             return Offset(offset);
         }
@@ -222,12 +220,12 @@ namespace SqlKata
         /// <param name="page"></param>
         /// <param name="perPage"></param>
         /// <returns></returns>
-        public Query ForPage(int page, int perPage = 15)
+        public QueryBuilder ForPage(int page, int perPage = 15)
         {
             return Skip((page - 1) * perPage).Take(perPage);
         }
 
-        public Query Distinct()
+        public QueryBuilder Distinct()
         {
             IsDistinct = true;
             return this;
@@ -240,7 +238,7 @@ namespace SqlKata
         /// <param name="whenTrue">Invoked when the condition is true</param>
         /// <param name="whenFalse">Optional, invoked when the condition is false</param>
         /// <returns></returns>
-        public Query When(bool condition, Func<Query, Query>? whenTrue, Func<Query, Query>? whenFalse = null)
+        public QueryBuilder When(bool condition, Func<QueryBuilder, QueryBuilder>? whenTrue, Func<QueryBuilder, QueryBuilder>? whenFalse = null)
         {
             if (condition && whenTrue != null) return whenTrue.Invoke(this);
 
@@ -255,17 +253,17 @@ namespace SqlKata
         /// <param name="condition"></param>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public Query WhenNot(bool condition, Func<Query, Query> callback)
+        public QueryBuilder WhenNot(bool condition, Func<QueryBuilder, QueryBuilder> callback)
         {
             if (!condition) return callback.Invoke(this);
 
             return this;
         }
 
-        public Query OrderBy(params string[] columns)
+        public QueryBuilder OrderBy(params string[] columns)
         {
             foreach (var column in columns)
-                AddComponent(new OrderBy
+                AddComponent(new OrderByBuilder
                 {
                     Engine = EngineScope,
                     Component = "order",
@@ -276,10 +274,10 @@ namespace SqlKata
             return this;
         }
 
-        public Query OrderByDesc(params string[] columns)
+        public QueryBuilder OrderByDesc(params string[] columns)
         {
             foreach (var column in columns)
-                AddComponent(new OrderBy
+                AddComponent(new OrderByBuilder
                 {
                     Engine = EngineScope,
                     Component = "order",
@@ -290,9 +288,9 @@ namespace SqlKata
             return this;
         }
 
-        public Query OrderByRaw(string expression, params object[] bindings)
+        public QueryBuilder OrderByRaw(string expression, params object[] bindings)
         {
-            return AddComponent(new RawOrderBy
+            return AddComponent(new RawOrderByBuilder
             {
                 Engine = EngineScope,
                 Component = "order",
@@ -301,19 +299,19 @@ namespace SqlKata
             });
         }
 
-        public Query OrderByRandom(string seed)
+        public QueryBuilder OrderByRandom(string seed)
         {
-            return AddComponent(new OrderByRandom()
+            return AddComponent(new OrderByRandomBuilder
             {
                 Engine = EngineScope,
                 Component = "order",
             });
         }
 
-        public Query GroupBy(params string[] columns)
+        public QueryBuilder GroupBy(params string[] columns)
         {
             foreach (var column in columns)
-                AddComponent(new Column
+                AddComponent(new ColumnBuilder
                 {
                     Engine = EngineScope,
                     Component = "group",
@@ -323,9 +321,9 @@ namespace SqlKata
             return this;
         }
 
-        public Query GroupByRaw(string expression, params object?[] bindings)
+        public QueryBuilder GroupByRaw(string expression, params object?[] bindings)
         {
-            AddComponent(new RawColumn
+            AddComponent(new RawColumnBuilder
             {
                 Engine = EngineScope,
                 Component = "group",
@@ -336,11 +334,11 @@ namespace SqlKata
             return this;
         }
 
-        public Query Include(string relationName, Query query,
+        public QueryBuilder Include(string relationName, QueryBuilder query,
             string? foreignKey = null, string localKey = "Id",
             bool isMany = false)
         {
-            Includes.Add(new Include
+            Includes.Add(new IncludeBuilder
             {
                 Name = relationName,
                 LocalKey = localKey,
@@ -352,7 +350,7 @@ namespace SqlKata
             return this;
         }
 
-        public Query IncludeMany(string relationName, Query query,
+        public QueryBuilder IncludeMany(string relationName, QueryBuilder query,
             string? foreignKey = null, string localKey = "Id")
         {
             return Include(relationName, query, foreignKey, localKey, true);
@@ -364,7 +362,7 @@ namespace SqlKata
         /// <param name="variable"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public Query Define(string variable, object? value)
+        public QueryBuilder Define(string variable, object? value)
         {
             Variables.Add(variable, value);
 

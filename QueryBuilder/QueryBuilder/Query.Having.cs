@@ -3,16 +3,16 @@ using System.Reflection;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query Having(string column, string op, object? value)
+        public QueryBuilder Having(string column, string op, object? value)
         {
             // If the value is "null", we will just assume the developer wants to add a
             // Having null clause to the query. So, we will allow a short-cut here to
             // that method for convenience so the developer doesn't have to check.
             if (value == null) return Not(op != "=").HavingNull(column);
 
-            return AddComponent(new BasicCondition
+            return AddComponent(new BasicConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -24,37 +24,37 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNot(string column, string op, object value)
+        public QueryBuilder HavingNot(string column, string op, object value)
         {
             return Not().Having(column, op, value);
         }
 
-        public Query OrHaving(string column, string op, object value)
+        public QueryBuilder OrHaving(string column, string op, object value)
         {
             return Or().Having(column, op, value);
         }
 
-        public Query OrHavingNot(string column, string op, object value)
+        public QueryBuilder OrHavingNot(string column, string op, object value)
         {
             return Or().Not().Having(column, op, value);
         }
 
-        public Query Having(string column, object? value)
+        public QueryBuilder Having(string column, object? value)
         {
             return Having(column, "=", value);
         }
 
-        public Query HavingNot(string column, object value)
+        public QueryBuilder HavingNot(string column, object value)
         {
             return HavingNot(column, "=", value);
         }
 
-        public Query OrHaving(string column, object value)
+        public QueryBuilder OrHaving(string column, object value)
         {
             return OrHaving(column, "=", value);
         }
 
-        public Query OrHavingNot(string column, object value)
+        public QueryBuilder OrHavingNot(string column, object value)
         {
             return OrHavingNot(column, "=", value);
         }
@@ -64,7 +64,7 @@ namespace SqlKata
         /// </summary>
         /// <param name="constraints"></param>
         /// <returns></returns>
-        public Query Having(object constraints)
+        public QueryBuilder Having(object constraints)
         {
             var dictionary = new Dictionary<string, object?>();
 
@@ -74,7 +74,7 @@ namespace SqlKata
             return Having(dictionary);
         }
 
-        public Query Having(IEnumerable<KeyValuePair<string, object?>> values)
+        public QueryBuilder Having(IEnumerable<KeyValuePair<string, object?>> values)
         {
             var query = this;
             var orFlag = GetOr();
@@ -93,9 +93,9 @@ namespace SqlKata
             return query;
         }
 
-        public Query HavingRaw(string sql, params object[] bindings)
+        public QueryBuilder HavingRaw(string sql, params object[] bindings)
         {
-            return AddComponent(new RawCondition
+            return AddComponent(new RawConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -106,7 +106,7 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingRaw(string sql, params object[] bindings)
+        public QueryBuilder OrHavingRaw(string sql, params object[] bindings)
         {
             return Or().HavingRaw(sql, bindings);
         }
@@ -116,11 +116,11 @@ namespace SqlKata
         /// </summary>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public Query Having(Func<Query, Query> callback)
+        public QueryBuilder Having(Func<QueryBuilder, QueryBuilder> callback)
         {
             var query = callback.Invoke(NewChild());
 
-            return AddComponent(new NestedCondition
+            return AddComponent(new NestedConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -130,24 +130,24 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNot(Func<Query, Query> callback)
+        public QueryBuilder HavingNot(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().Having(callback);
         }
 
-        public Query OrHaving(Func<Query, Query> callback)
+        public QueryBuilder OrHaving(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Having(callback);
         }
 
-        public Query OrHavingNot(Func<Query, Query> callback)
+        public QueryBuilder OrHavingNot(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().Or().Having(callback);
         }
 
-        public Query HavingColumns(string first, string op, string second)
+        public QueryBuilder HavingColumns(string first, string op, string second)
         {
-            return AddComponent(new TwoColumnsCondition
+            return AddComponent(new TwoColumnsConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -159,14 +159,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingColumns(string first, string op, string second)
+        public QueryBuilder OrHavingColumns(string first, string op, string second)
         {
             return Or().HavingColumns(first, op, second);
         }
 
-        public Query HavingNull(string column)
+        public QueryBuilder HavingNull(string column)
         {
-            return AddComponent(new NullCondition
+            return AddComponent(new NullConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -176,24 +176,24 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotNull(string column)
+        public QueryBuilder HavingNotNull(string column)
         {
             return Not().HavingNull(column);
         }
 
-        public Query OrHavingNull(string column)
+        public QueryBuilder OrHavingNull(string column)
         {
             return Or().HavingNull(column);
         }
 
-        public Query OrHavingNotNull(string column)
+        public QueryBuilder OrHavingNotNull(string column)
         {
             return Or().Not().HavingNull(column);
         }
 
-        public Query HavingTrue(string column)
+        public QueryBuilder HavingTrue(string column)
         {
-            return AddComponent(new BooleanCondition
+            return AddComponent(new BooleanConditionBuilder
             {
                 IsOr = false,
                 IsNot = false,
@@ -204,14 +204,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingTrue(string column)
+        public QueryBuilder OrHavingTrue(string column)
         {
             return Or().HavingTrue(column);
         }
 
-        public Query HavingFalse(string column)
+        public QueryBuilder HavingFalse(string column)
         {
-            return AddComponent(new BooleanCondition
+            return AddComponent(new BooleanConditionBuilder
             {
                 IsOr = false,
                 IsNot = false,
@@ -222,14 +222,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingFalse(string column)
+        public QueryBuilder OrHavingFalse(string column)
         {
             return Or().HavingFalse(column);
         }
 
-        public Query HavingLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder HavingLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -243,28 +243,28 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotLike(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingNotLike(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Not().HavingLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingLike(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingLike(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().HavingLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingNotLike(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingNotLike(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().HavingLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query HavingStarts(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingStarts(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -278,27 +278,27 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotStarts(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingNotStarts(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Not().HavingStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingStarts(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingStarts(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().HavingStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingNotStarts(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingNotStarts(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().HavingStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query HavingEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder HavingEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -312,28 +312,28 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotEnds(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingNotEnds(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Not().HavingEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingEnds(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingEnds(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().HavingEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingNotEnds(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingNotEnds(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().HavingEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query HavingContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -347,27 +347,27 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder HavingNotContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Not().HavingContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().HavingContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrHavingNotContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrHavingNotContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().HavingContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query HavingBetween<T>(string column, T lower, T higher)
+        public QueryBuilder HavingBetween<T>(string column, T lower, T higher)
         {
-            return AddComponent(new BetweenCondition<T>
+            return AddComponent(new BetweenConditionBuilder<T>
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -379,28 +379,28 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingBetween<T>(string column, T lower, T higher)
+        public QueryBuilder OrHavingBetween<T>(string column, T lower, T higher)
         {
             return Or().HavingBetween(column, lower, higher);
         }
 
-        public Query HavingNotBetween<T>(string column, T lower, T higher)
+        public QueryBuilder HavingNotBetween<T>(string column, T lower, T higher)
         {
             return Not().HavingBetween(column, lower, higher);
         }
 
-        public Query OrHavingNotBetween<T>(string column, T lower, T higher)
+        public QueryBuilder OrHavingNotBetween<T>(string column, T lower, T higher)
         {
             return Or().Not().HavingBetween(column, lower, higher);
         }
 
-        public Query HavingIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder HavingIn<T>(string column, IEnumerable<T> values)
         {
             // If the developer has passed a string they most likely want a List<string>
             // since string is considered as List<char>
             if (values is string val)
             {
-                return AddComponent(new InCondition<string>
+                return AddComponent(new InConditionBuilder<string>
                 {
                     Engine = EngineScope,
                     Component = "having",
@@ -411,7 +411,7 @@ namespace SqlKata
                 });
             }
 
-            return AddComponent(new InCondition<T>
+            return AddComponent(new InConditionBuilder<T>
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -422,25 +422,25 @@ namespace SqlKata
             });
         }
 
-        public Query OrHavingIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder OrHavingIn<T>(string column, IEnumerable<T> values)
         {
             return Or().HavingIn(column, values);
         }
 
-        public Query HavingNotIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder HavingNotIn<T>(string column, IEnumerable<T> values)
         {
             return Not().HavingIn(column, values);
         }
 
-        public Query OrHavingNotIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder OrHavingNotIn<T>(string column, IEnumerable<T> values)
         {
             return Or().Not().HavingIn(column, values);
         }
 
 
-        public Query HavingIn(string column, Query query)
+        public QueryBuilder HavingIn(string column, QueryBuilder query)
         {
-            return AddComponent(new InQueryCondition
+            return AddComponent(new InQueryConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -451,39 +451,39 @@ namespace SqlKata
             });
         }
 
-        public Query HavingIn(string column, Func<Query, Query> callback)
+        public QueryBuilder HavingIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
-            var query = callback.Invoke(new Query());
+            var query = callback.Invoke(new QueryBuilder());
 
             return HavingIn(column, query);
         }
 
-        public Query OrHavingIn(string column, Query query)
+        public QueryBuilder OrHavingIn(string column, QueryBuilder query)
         {
             return Or().HavingIn(column, query);
         }
 
-        public Query OrHavingIn(string column, Func<Query, Query> callback)
+        public QueryBuilder OrHavingIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().HavingIn(column, callback);
         }
 
-        public Query HavingNotIn(string column, Query query)
+        public QueryBuilder HavingNotIn(string column, QueryBuilder query)
         {
             return Not().HavingIn(column, query);
         }
 
-        public Query HavingNotIn(string column, Func<Query, Query> callback)
+        public QueryBuilder HavingNotIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().HavingIn(column, callback);
         }
 
-        public Query OrHavingNotIn(string column, Query query)
+        public QueryBuilder OrHavingNotIn(string column, QueryBuilder query)
         {
             return Or().Not().HavingIn(column, query);
         }
 
-        public Query OrHavingNotIn(string column, Func<Query, Query> callback)
+        public QueryBuilder OrHavingNotIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Not().HavingIn(column, callback);
         }
@@ -496,16 +496,16 @@ namespace SqlKata
         /// <param name="op"></param>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public Query Having(string column, string op, Func<Query, Query> callback)
+        public QueryBuilder Having(string column, string op, Func<QueryBuilder, QueryBuilder> callback)
         {
             var query = callback.Invoke(NewChild());
 
             return Having(column, op, query);
         }
 
-        public Query Having(string column, string op, Query query)
+        public QueryBuilder Having(string column, string op, QueryBuilder query)
         {
-            return AddComponent(new QueryCondition
+            return AddComponent(new QueryConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -517,17 +517,17 @@ namespace SqlKata
             });
         }
 
-        public Query OrHaving(string column, string op, Query query)
+        public QueryBuilder OrHaving(string column, string op, QueryBuilder query)
         {
             return Or().Having(column, op, query);
         }
 
-        public Query OrHaving(string column, string op, Func<Query, Query> callback)
+        public QueryBuilder OrHaving(string column, string op, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Having(column, op, callback);
         }
 
-        public Query HavingExists(Query query)
+        public QueryBuilder HavingExists(QueryBuilder query)
         {
             if (!query.HasComponent("from"))
                 throw new ArgumentException(
@@ -538,7 +538,7 @@ namespace SqlKata
                 .SelectRaw("1")
                 .Limit(1);
 
-            return AddComponent(new ExistsCondition
+            return AddComponent(new ExistsConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -548,47 +548,47 @@ namespace SqlKata
             });
         }
 
-        public Query HavingExists(Func<Query, Query> callback)
+        public QueryBuilder HavingExists(Func<QueryBuilder, QueryBuilder> callback)
         {
-            var childQuery = new Query().SetParent(this);
+            var childQuery = new QueryBuilder().SetParent(this);
             return HavingExists(callback.Invoke(childQuery));
         }
 
-        public Query HavingNotExists(Query query)
+        public QueryBuilder HavingNotExists(QueryBuilder query)
         {
             return Not().HavingExists(query);
         }
 
-        public Query HavingNotExists(Func<Query, Query> callback)
+        public QueryBuilder HavingNotExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().HavingExists(callback);
         }
 
-        public Query OrHavingExists(Query query)
+        public QueryBuilder OrHavingExists(QueryBuilder query)
         {
             return Or().HavingExists(query);
         }
 
-        public Query OrHavingExists(Func<Query, Query> callback)
+        public QueryBuilder OrHavingExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().HavingExists(callback);
         }
 
-        public Query OrHavingNotExists(Query query)
+        public QueryBuilder OrHavingNotExists(QueryBuilder query)
         {
             return Or().Not().HavingExists(query);
         }
 
-        public Query OrHavingNotExists(Func<Query, Query> callback)
+        public QueryBuilder OrHavingNotExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Not().HavingExists(callback);
         }
 
         #region date
 
-        public Query HavingDatePart(string part, string column, string op, object value)
+        public QueryBuilder HavingDatePart(string part, string column, string op, object value)
         {
-            return AddComponent(new BasicDateCondition
+            return AddComponent(new BasicDateConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "having",
@@ -601,117 +601,117 @@ namespace SqlKata
             });
         }
 
-        public Query HavingNotDatePart(string part, string column, string op, object value)
+        public QueryBuilder HavingNotDatePart(string part, string column, string op, object value)
         {
             return Not().HavingDatePart(part, column, op, value);
         }
 
-        public Query OrHavingDatePart(string part, string column, string op, object value)
+        public QueryBuilder OrHavingDatePart(string part, string column, string op, object value)
         {
             return Or().HavingDatePart(part, column, op, value);
         }
 
-        public Query OrHavingNotDatePart(string part, string column, string op, object value)
+        public QueryBuilder OrHavingNotDatePart(string part, string column, string op, object value)
         {
             return Or().Not().HavingDatePart(part, column, op, value);
         }
 
-        public Query HavingDate(string column, string op, object value)
+        public QueryBuilder HavingDate(string column, string op, object value)
         {
             return HavingDatePart("date", column, op, value);
         }
 
-        public Query HavingNotDate(string column, string op, object value)
+        public QueryBuilder HavingNotDate(string column, string op, object value)
         {
             return Not().HavingDate(column, op, value);
         }
 
-        public Query OrHavingDate(string column, string op, object value)
+        public QueryBuilder OrHavingDate(string column, string op, object value)
         {
             return Or().HavingDate(column, op, value);
         }
 
-        public Query OrHavingNotDate(string column, string op, object value)
+        public QueryBuilder OrHavingNotDate(string column, string op, object value)
         {
             return Or().Not().HavingDate(column, op, value);
         }
 
-        public Query HavingTime(string column, string op, object value)
+        public QueryBuilder HavingTime(string column, string op, object value)
         {
             return HavingDatePart("time", column, op, value);
         }
 
-        public Query HavingNotTime(string column, string op, object value)
+        public QueryBuilder HavingNotTime(string column, string op, object value)
         {
             return Not().HavingTime(column, op, value);
         }
 
-        public Query OrHavingTime(string column, string op, object value)
+        public QueryBuilder OrHavingTime(string column, string op, object value)
         {
             return Or().HavingTime(column, op, value);
         }
 
-        public Query OrHavingNotTime(string column, string op, object value)
+        public QueryBuilder OrHavingNotTime(string column, string op, object value)
         {
             return Or().Not().HavingTime(column, op, value);
         }
 
-        public Query HavingDatePart(string part, string column, object value)
+        public QueryBuilder HavingDatePart(string part, string column, object value)
         {
             return HavingDatePart(part, column, "=", value);
         }
 
-        public Query HavingNotDatePart(string part, string column, object value)
+        public QueryBuilder HavingNotDatePart(string part, string column, object value)
         {
             return HavingNotDatePart(part, column, "=", value);
         }
 
-        public Query OrHavingDatePart(string part, string column, object value)
+        public QueryBuilder OrHavingDatePart(string part, string column, object value)
         {
             return OrHavingDatePart(part, column, "=", value);
         }
 
-        public Query OrHavingNotDatePart(string part, string column, object value)
+        public QueryBuilder OrHavingNotDatePart(string part, string column, object value)
         {
             return OrHavingNotDatePart(part, column, "=", value);
         }
 
-        public Query HavingDate(string column, object value)
+        public QueryBuilder HavingDate(string column, object value)
         {
             return HavingDate(column, "=", value);
         }
 
-        public Query HavingNotDate(string column, object value)
+        public QueryBuilder HavingNotDate(string column, object value)
         {
             return HavingNotDate(column, "=", value);
         }
 
-        public Query OrHavingDate(string column, object value)
+        public QueryBuilder OrHavingDate(string column, object value)
         {
             return OrHavingDate(column, "=", value);
         }
 
-        public Query OrHavingNotDate(string column, object value)
+        public QueryBuilder OrHavingNotDate(string column, object value)
         {
             return OrHavingNotDate(column, "=", value);
         }
 
-        public Query HavingTime(string column, object value)
+        public QueryBuilder HavingTime(string column, object value)
         {
             return HavingTime(column, "=", value);
         }
 
-        public Query HavingNotTime(string column, object value)
+        public QueryBuilder HavingNotTime(string column, object value)
         {
             return HavingNotTime(column, "=", value);
         }
 
-        public Query OrHavingTime(string column, object value)
+        public QueryBuilder OrHavingTime(string column, object value)
         {
             return OrHavingTime(column, "=", value);
         }
 
-        public Query OrHavingNotTime(string column, object value)
+        public QueryBuilder OrHavingNotTime(string column, object value)
         {
             return OrHavingNotTime(column, "=", value);
         }

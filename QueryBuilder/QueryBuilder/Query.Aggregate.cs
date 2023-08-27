@@ -2,14 +2,14 @@ using System.Collections.Immutable;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query AsAggregate(string type, string[]? columns = null)
+        public QueryBuilder AsAggregate(string type, string[]? columns = null)
         {
             Method = "aggregate";
 
             RemoveComponent("aggregate")
-                .AddComponent(new AggregateClause
+                .AddComponent(new AggregateClauseBuilder
                 {
                     Engine = EngineScope,
                     Component = "aggregate",
@@ -20,7 +20,7 @@ namespace SqlKata
             return this;
         }
 
-        public Query AsCount(string[]? columns = null)
+        public QueryBuilder AsCount(string[]? columns = null)
         {
             var cols = columns?.ToList() ?? new List<string>();
 
@@ -29,27 +29,27 @@ namespace SqlKata
             return AsAggregate("count", cols.ToArray());
         }
 
-        public Query AsAvg(string column)
+        public QueryBuilder AsAvg(string column)
         {
             return AsAggregate("avg", new[] { column });
         }
 
-        public Query AsAverage(string column)
+        public QueryBuilder AsAverage(string column)
         {
             return AsAvg(column);
         }
 
-        public Query AsSum(string column)
+        public QueryBuilder AsSum(string column)
         {
             return AsAggregate("sum", new[] { column });
         }
 
-        public Query AsMax(string column)
+        public QueryBuilder AsMax(string column)
         {
             return AsAggregate("max", new[] { column });
         }
 
-        public Query AsMin(string column)
+        public QueryBuilder AsMin(string column)
         {
             return AsAggregate("min", new[] { column });
         }

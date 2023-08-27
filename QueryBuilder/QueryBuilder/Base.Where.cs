@@ -3,12 +3,12 @@ using System.Reflection;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query Where(string column, string op, object? value)
+        public QueryBuilder Where(string column, string op, object? value)
         {
             // If the value is "null", we will just assume the developer wants to add a
-            // where null clause to the query. So, we will allow a short-cut here to
+            // where null clause to the QueryBuilder. So, we will allow a short-cut here to
             // that method for convenience so the developer doesn't have to check.
             if (value == null) return Not(op != "=").WhereNull(column);
 
@@ -19,7 +19,7 @@ namespace SqlKata
                 return boolValue ? WhereTrue(column) : WhereFalse(column);
             }
 
-            return AddComponent(new BasicCondition
+            return AddComponent(new BasicConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -31,37 +31,37 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNot(string column, string op, object? value)
+        public QueryBuilder WhereNot(string column, string op, object? value)
         {
             return Not().Where(column, op, value);
         }
 
-        public Query OrWhere(string column, string op, object? value)
+        public QueryBuilder OrWhere(string column, string op, object? value)
         {
             return Or().Where(column, op, value);
         }
 
-        public Query OrWhereNot(string column, string op, object? value)
+        public QueryBuilder OrWhereNot(string column, string op, object? value)
         {
             return Or().Not().Where(column, op, value);
         }
 
-        public Query Where(string column, object? value)
+        public QueryBuilder Where(string column, object? value)
         {
             return Where(column, "=", value);
         }
 
-        public Query WhereNot(string column, object? value)
+        public QueryBuilder WhereNot(string column, object? value)
         {
             return WhereNot(column, "=", value);
         }
 
-        public Query OrWhere(string column, object? value)
+        public QueryBuilder OrWhere(string column, object? value)
         {
             return OrWhere(column, "=", value);
         }
 
-        public Query OrWhereNot(string column, object? value)
+        public QueryBuilder OrWhereNot(string column, object? value)
         {
             return OrWhereNot(column, "=", value);
         }
@@ -71,7 +71,7 @@ namespace SqlKata
         /// </summary>
         /// <param name="constraints"></param>
         /// <returns></returns>
-        public Query Where(object constraints)
+        public QueryBuilder Where(object constraints)
         {
             var dictionary = new Dictionary<string, object?>();
 
@@ -81,28 +81,28 @@ namespace SqlKata
             return Where(dictionary);
         }
 
-        public Query Where(IEnumerable<KeyValuePair<string, object?>> values)
+        public QueryBuilder Where(IEnumerable<KeyValuePair<string, object?>> values)
         {
-            var query = this;
+            var QueryBuilder = this;
             var orFlag = GetOr();
             var notFlag = GetNot();
 
             foreach (var tuple in values)
             {
                 if (orFlag)
-                    query.Or();
+                    QueryBuilder.Or();
                 else
-                    query.And();
+                    QueryBuilder.And();
 
-                query = Not(notFlag).Where(tuple.Key, tuple.Value);
+                QueryBuilder = Not(notFlag).Where(tuple.Key, tuple.Value);
             }
 
-            return query;
+            return QueryBuilder;
         }
 
-        public Query WhereRaw(string sql, params object[] bindings)
+        public QueryBuilder WhereRaw(string sql, params object[] bindings)
         {
-            return AddComponent(new RawCondition
+            return AddComponent(new RawConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -113,7 +113,7 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereRaw(string sql, params object[] bindings)
+        public QueryBuilder OrWhereRaw(string sql, params object[] bindings)
         {
             return Or().WhereRaw(sql, bindings);
         }
@@ -123,41 +123,41 @@ namespace SqlKata
         /// </summary>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public Query Where(Func<Query, Query> callback)
+        public QueryBuilder Where(Func<QueryBuilder, QueryBuilder> callback)
         {
-            var query = callback.Invoke(NewChild());
+            var QueryBuilder = callback.Invoke(NewChild());
 
             // omit empty queries
-            if (!query.Clauses.Any(x => x.Component == "where")) return this;
+            if (!QueryBuilder.Clauses.Any(x => x.Component == "where")) return this;
 
-            return AddComponent(new NestedCondition
+            return AddComponent(new NestedConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
-                Query = query,
+                Query = QueryBuilder,
                 IsNot = GetNot(),
                 IsOr = GetOr()
             });
         }
 
-        public Query WhereNot(Func<Query, Query> callback)
+        public QueryBuilder WhereNot(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().Where(callback);
         }
 
-        public Query OrWhere(Func<Query, Query> callback)
+        public QueryBuilder OrWhere(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Where(callback);
         }
 
-        public Query OrWhereNot(Func<Query, Query> callback)
+        public QueryBuilder OrWhereNot(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().Or().Where(callback);
         }
 
-        public Query WhereColumns(string first, string op, string second)
+        public QueryBuilder WhereColumns(string first, string op, string second)
         {
-            return AddComponent(new TwoColumnsCondition
+            return AddComponent(new TwoColumnsConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -169,14 +169,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereColumns(string first, string op, string second)
+        public QueryBuilder OrWhereColumns(string first, string op, string second)
         {
             return Or().WhereColumns(first, op, second);
         }
 
-        public Query WhereNull(string column)
+        public QueryBuilder WhereNull(string column)
         {
-            return AddComponent(new NullCondition
+            return AddComponent(new NullConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -186,24 +186,24 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotNull(string column)
+        public QueryBuilder WhereNotNull(string column)
         {
             return Not().WhereNull(column);
         }
 
-        public Query OrWhereNull(string column)
+        public QueryBuilder OrWhereNull(string column)
         {
             return Or().WhereNull(column);
         }
 
-        public Query OrWhereNotNull(string column)
+        public QueryBuilder OrWhereNotNull(string column)
         {
             return Or().Not().WhereNull(column);
         }
 
-        public Query WhereTrue(string column)
+        public QueryBuilder WhereTrue(string column)
         {
-            return AddComponent(new BooleanCondition
+            return AddComponent(new BooleanConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -214,14 +214,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereTrue(string column)
+        public QueryBuilder OrWhereTrue(string column)
         {
             return Or().WhereTrue(column);
         }
 
-        public Query WhereFalse(string column)
+        public QueryBuilder WhereFalse(string column)
         {
-            return AddComponent(new BooleanCondition
+            return AddComponent(new BooleanConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -232,14 +232,14 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereFalse(string column)
+        public QueryBuilder OrWhereFalse(string column)
         {
             return Or().WhereFalse(column);
         }
 
-        public Query WhereLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -253,24 +253,24 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereNotLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Not().WhereLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().WhereLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereNotLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereNotLike(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().Not().WhereLike(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query WhereStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -284,25 +284,25 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereNotStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Not().WhereStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereStarts(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().WhereStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereNotStarts(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrWhereNotStarts(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().WhereStarts(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query WhereEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -316,24 +316,24 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereNotEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Not().WhereEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().WhereEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereNotEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereNotEnds(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().Not().WhereEnds(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query WhereContains(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder WhereContains(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
-            return AddComponent(new BasicStringCondition
+            return AddComponent(new BasicStringConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -347,26 +347,26 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder WhereNotContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Not().WhereContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereContains(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
+        public QueryBuilder OrWhereContains(string column, object value, bool caseSensitive = false, string? escapeCharacter = null)
         {
             return Or().WhereContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query OrWhereNotContains(string column, object value, bool caseSensitive = false,
+        public QueryBuilder OrWhereNotContains(string column, object value, bool caseSensitive = false,
             string? escapeCharacter = null)
         {
             return Or().Not().WhereContains(column, value, caseSensitive, escapeCharacter);
         }
 
-        public Query WhereBetween<T>(string column, T lower, T higher)
+        public QueryBuilder WhereBetween<T>(string column, T lower, T higher)
         {
-            return AddComponent(new BetweenCondition<T>
+            return AddComponent(new BetweenConditionBuilder<T>
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -378,28 +378,28 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereBetween<T>(string column, T lower, T higher)
+        public QueryBuilder OrWhereBetween<T>(string column, T lower, T higher)
         {
             return Or().WhereBetween(column, lower, higher);
         }
 
-        public Query WhereNotBetween<T>(string column, T lower, T higher)
+        public QueryBuilder WhereNotBetween<T>(string column, T lower, T higher)
         {
             return Not().WhereBetween(column, lower, higher);
         }
 
-        public Query OrWhereNotBetween<T>(string column, T lower, T higher)
+        public QueryBuilder OrWhereNotBetween<T>(string column, T lower, T higher)
         {
             return Or().Not().WhereBetween(column, lower, higher);
         }
 
-        public Query WhereIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder WhereIn<T>(string column, IEnumerable<T> values)
         {
             // If the developer has passed a string they most likely want a List<string>
             // since string is considered as List<char>
             if (values is string val)
             {
-                return AddComponent(new InCondition<string>
+                return AddComponent(new InConditionBuilder<string>
                 {
                     Engine = EngineScope,
                     Component = "where",
@@ -410,7 +410,7 @@ namespace SqlKata
                 });
             }
 
-            return AddComponent(new InCondition<T>
+            return AddComponent(new InConditionBuilder<T>
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -421,197 +421,197 @@ namespace SqlKata
             });
         }
 
-        public Query OrWhereIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder OrWhereIn<T>(string column, IEnumerable<T> values)
         {
             return Or().WhereIn(column, values);
         }
 
-        public Query WhereNotIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder WhereNotIn<T>(string column, IEnumerable<T> values)
         {
             return Not().WhereIn(column, values);
         }
 
-        public Query OrWhereNotIn<T>(string column, IEnumerable<T> values)
+        public QueryBuilder OrWhereNotIn<T>(string column, IEnumerable<T> values)
         {
             return Or().Not().WhereIn(column, values);
         }
 
 
-        public Query WhereIn(string column, Query query)
+        public QueryBuilder WhereIn(string column, QueryBuilder QueryBuilder)
         {
-            return AddComponent(new InQueryCondition
+            return AddComponent(new InQueryConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
                 Column = column,
                 IsOr = GetOr(),
                 IsNot = GetNot(),
-                Query = query
+                Query = QueryBuilder
             });
         }
 
-        public Query WhereIn(string column, Func<Query, Query> callback)
+        public QueryBuilder WhereIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
-            var query = callback.Invoke(new Query().SetParent(this));
+            var QueryBuilder = callback.Invoke(new QueryBuilder().SetParent(this));
 
-            return WhereIn(column, query);
+            return WhereIn(column, QueryBuilder);
         }
 
-        public Query OrWhereIn(string column, Query query)
+        public QueryBuilder OrWhereIn(string column, QueryBuilder QueryBuilder)
         {
-            return Or().WhereIn(column, query);
+            return Or().WhereIn(column, QueryBuilder);
         }
 
-        public Query OrWhereIn(string column, Func<Query, Query> callback)
+        public QueryBuilder OrWhereIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().WhereIn(column, callback);
         }
 
-        public Query WhereNotIn(string column, Query query)
+        public QueryBuilder WhereNotIn(string column, QueryBuilder QueryBuilder)
         {
-            return Not().WhereIn(column, query);
+            return Not().WhereIn(column, QueryBuilder);
         }
 
-        public Query WhereNotIn(string column, Func<Query, Query> callback)
+        public QueryBuilder WhereNotIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().WhereIn(column, callback);
         }
 
-        public Query OrWhereNotIn(string column, Query query)
+        public QueryBuilder OrWhereNotIn(string column, QueryBuilder QueryBuilder)
         {
-            return Or().Not().WhereIn(column, query);
+            return Or().Not().WhereIn(column, QueryBuilder);
         }
 
-        public Query OrWhereNotIn(string column, Func<Query, Query> callback)
+        public QueryBuilder OrWhereNotIn(string column, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Not().WhereIn(column, callback);
         }
 
 
         /// <summary>
-        ///     Perform a sub query where clause
+        ///     Perform a sub QueryBuilder where clause
         /// </summary>
         /// <param name="column"></param>
         /// <param name="op"></param>
         /// <param name="callback"></param>
         /// <returns></returns>
-        public Query Where(string column, string op, Func<Query, Query> callback)
+        public QueryBuilder Where(string column, string op, Func<QueryBuilder, QueryBuilder> callback)
         {
-            var query = callback.Invoke(NewChild());
+            var QueryBuilder = callback.Invoke(NewChild());
 
-            return Where(column, op, query);
+            return Where(column, op, QueryBuilder);
         }
 
-        public Query Where(string column, string op, Query query)
+        public QueryBuilder Where(string column, string op, QueryBuilder QueryBuilder)
         {
-            return AddComponent(new QueryCondition
+            return AddComponent(new QueryConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
                 Column = column,
                 Operator = op,
-                Query = query,
+                Query = QueryBuilder,
                 IsNot = GetNot(),
                 IsOr = GetOr()
             });
         }
 
-        public Query WhereSub(Query query, object value)
+        public QueryBuilder WhereSub(QueryBuilder QueryBuilder, object value)
         {
-            return WhereSub(query, "=", value);
+            return WhereSub(QueryBuilder, "=", value);
         }
 
-        public Query WhereSub(Query query, string op, object value)
+        public QueryBuilder WhereSub(QueryBuilder QueryBuilder, string op, object value)
         {
-            return AddComponent(new SubQueryCondition
+            return AddComponent(new SubQueryConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
                 Value = value,
                 Operator = op,
-                Query = query,
+                Query = QueryBuilder,
                 IsNot = GetNot(),
                 IsOr = GetOr()
             });
         }
 
-        public Query OrWhereSub(Query query, object value)
+        public QueryBuilder OrWhereSub(QueryBuilder QueryBuilder, object value)
         {
-            return Or().WhereSub(query, value);
+            return Or().WhereSub(QueryBuilder, value);
         }
 
-        public Query OrWhereSub(Query query, string op, object value)
+        public QueryBuilder OrWhereSub(QueryBuilder QueryBuilder, string op, object value)
         {
-            return Or().WhereSub(query, op, value);
+            return Or().WhereSub(QueryBuilder, op, value);
         }
 
-        public Query OrWhere(string column, string op, Query query)
+        public QueryBuilder OrWhere(string column, string op, QueryBuilder QueryBuilder)
         {
-            return Or().Where(column, op, query);
+            return Or().Where(column, op, QueryBuilder);
         }
 
-        public Query OrWhere(string column, string op, Func<Query, Query> callback)
+        public QueryBuilder OrWhere(string column, string op, Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Where(column, op, callback);
         }
 
-        public Query WhereExists(Query query)
+        public QueryBuilder WhereExists(QueryBuilder QueryBuilder)
         {
-            if (!query.HasComponent("from"))
+            if (!QueryBuilder.HasComponent("from"))
                 throw new ArgumentException(
                     $"'{nameof(FromClause)}' cannot be empty if used inside a '{nameof(WhereExists)}' condition");
 
-            return AddComponent(new ExistsCondition
+            return AddComponent(new ExistsConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
-                Query = query,
+                Query = QueryBuilder,
                 IsNot = GetNot(),
                 IsOr = GetOr()
             });
         }
 
-        public Query WhereExists(Func<Query, Query> callback)
+        public QueryBuilder WhereExists(Func<QueryBuilder, QueryBuilder> callback)
         {
-            var childQuery = new Query().SetParent(this);
+            var childQuery = new QueryBuilder().SetParent(this);
             return WhereExists(callback.Invoke(childQuery));
         }
 
-        public Query WhereNotExists(Query query)
+        public QueryBuilder WhereNotExists(QueryBuilder QueryBuilder)
         {
-            return Not().WhereExists(query);
+            return Not().WhereExists(QueryBuilder);
         }
 
-        public Query WhereNotExists(Func<Query, Query> callback)
+        public QueryBuilder WhereNotExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Not().WhereExists(callback);
         }
 
-        public Query OrWhereExists(Query query)
+        public QueryBuilder OrWhereExists(QueryBuilder QueryBuilder)
         {
-            return Or().WhereExists(query);
+            return Or().WhereExists(QueryBuilder);
         }
 
-        public Query OrWhereExists(Func<Query, Query> callback)
+        public QueryBuilder OrWhereExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().WhereExists(callback);
         }
 
-        public Query OrWhereNotExists(Query query)
+        public QueryBuilder OrWhereNotExists(QueryBuilder QueryBuilder)
         {
-            return Or().Not().WhereExists(query);
+            return Or().Not().WhereExists(QueryBuilder);
         }
 
-        public Query OrWhereNotExists(Func<Query, Query> callback)
+        public QueryBuilder OrWhereNotExists(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Or().Not().WhereExists(callback);
         }
 
         #region date
 
-        public Query WhereDatePart(string part, string column, string op, object value)
+        public QueryBuilder WhereDatePart(string part, string column, string op, object value)
         {
-            return AddComponent(new BasicDateCondition
+            return AddComponent(new BasicDateConditionBuilder
             {
                 Engine = EngineScope,
                 Component = "where",
@@ -624,117 +624,117 @@ namespace SqlKata
             });
         }
 
-        public Query WhereNotDatePart(string part, string column, string op, object value)
+        public QueryBuilder WhereNotDatePart(string part, string column, string op, object value)
         {
             return Not().WhereDatePart(part, column, op, value);
         }
 
-        public Query OrWhereDatePart(string part, string column, string op, object value)
+        public QueryBuilder OrWhereDatePart(string part, string column, string op, object value)
         {
             return Or().WhereDatePart(part, column, op, value);
         }
 
-        public Query OrWhereNotDatePart(string part, string column, string op, object value)
+        public QueryBuilder OrWhereNotDatePart(string part, string column, string op, object value)
         {
             return Or().Not().WhereDatePart(part, column, op, value);
         }
 
-        public Query WhereDate(string column, string op, object value)
+        public QueryBuilder WhereDate(string column, string op, object value)
         {
             return WhereDatePart("date", column, op, value);
         }
 
-        public Query WhereNotDate(string column, string op, object value)
+        public QueryBuilder WhereNotDate(string column, string op, object value)
         {
             return Not().WhereDate(column, op, value);
         }
 
-        public Query OrWhereDate(string column, string op, object value)
+        public QueryBuilder OrWhereDate(string column, string op, object value)
         {
             return Or().WhereDate(column, op, value);
         }
 
-        public Query OrWhereNotDate(string column, string op, object value)
+        public QueryBuilder OrWhereNotDate(string column, string op, object value)
         {
             return Or().Not().WhereDate(column, op, value);
         }
 
-        public Query WhereTime(string column, string op, object value)
+        public QueryBuilder WhereTime(string column, string op, object value)
         {
             return WhereDatePart("time", column, op, value);
         }
 
-        public Query WhereNotTime(string column, string op, object value)
+        public QueryBuilder WhereNotTime(string column, string op, object value)
         {
             return Not().WhereTime(column, op, value);
         }
 
-        public Query OrWhereTime(string column, string op, object value)
+        public QueryBuilder OrWhereTime(string column, string op, object value)
         {
             return Or().WhereTime(column, op, value);
         }
 
-        public Query OrWhereNotTime(string column, string op, object value)
+        public QueryBuilder OrWhereNotTime(string column, string op, object value)
         {
             return Or().Not().WhereTime(column, op, value);
         }
 
-        public Query WhereDatePart(string part, string column, object value)
+        public QueryBuilder WhereDatePart(string part, string column, object value)
         {
             return WhereDatePart(part, column, "=", value);
         }
 
-        public Query WhereNotDatePart(string part, string column, object value)
+        public QueryBuilder WhereNotDatePart(string part, string column, object value)
         {
             return WhereNotDatePart(part, column, "=", value);
         }
 
-        public Query OrWhereDatePart(string part, string column, object value)
+        public QueryBuilder OrWhereDatePart(string part, string column, object value)
         {
             return OrWhereDatePart(part, column, "=", value);
         }
 
-        public Query OrWhereNotDatePart(string part, string column, object value)
+        public QueryBuilder OrWhereNotDatePart(string part, string column, object value)
         {
             return OrWhereNotDatePart(part, column, "=", value);
         }
 
-        public Query WhereDate(string column, object value)
+        public QueryBuilder WhereDate(string column, object value)
         {
             return WhereDate(column, "=", value);
         }
 
-        public Query WhereNotDate(string column, object value)
+        public QueryBuilder WhereNotDate(string column, object value)
         {
             return WhereNotDate(column, "=", value);
         }
 
-        public Query OrWhereDate(string column, object value)
+        public QueryBuilder OrWhereDate(string column, object value)
         {
             return OrWhereDate(column, "=", value);
         }
 
-        public Query OrWhereNotDate(string column, object value)
+        public QueryBuilder OrWhereNotDate(string column, object value)
         {
             return OrWhereNotDate(column, "=", value);
         }
 
-        public Query WhereTime(string column, object value)
+        public QueryBuilder WhereTime(string column, object value)
         {
             return WhereTime(column, "=", value);
         }
 
-        public Query WhereNotTime(string column, object value)
+        public QueryBuilder WhereNotTime(string column, object value)
         {
             return WhereNotTime(column, "=", value);
         }
 
-        public Query OrWhereTime(string column, object value)
+        public QueryBuilder OrWhereTime(string column, object value)
         {
             return OrWhereTime(column, "=", value);
         }
 
-        public Query OrWhereNotTime(string column, object value)
+        public QueryBuilder OrWhereNotTime(string column, object value)
         {
             return OrWhereNotTime(column, "=", value);
         }

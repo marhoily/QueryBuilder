@@ -2,14 +2,14 @@ using System.Collections.Immutable;
 
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query Combine(string operation, bool all, Query query)
+        public QueryBuilder Combine(string operation, bool all, QueryBuilder query)
         {
             if (Method != "select" || query.Method != "select")
                 throw new InvalidOperationException("Only select queries can be combined.");
 
-            return AddComponent(new Combine
+            return AddComponent(new CombineBuilder
             {
                 Engine = EngineScope,
                 Component = "combine",
@@ -19,11 +19,11 @@ namespace SqlKata
             });
         }
 
-        public Query CombineRaw(string sql, params object[] bindings)
+        public QueryBuilder CombineRaw(string sql, params object[] bindings)
         {
             if (Method != "select") throw new InvalidOperationException("Only select queries can be combined.");
 
-            return AddComponent(new RawCombine
+            return AddComponent(new RawCombineBuilder
             {
                 Engine = EngineScope,  
                 Component = "combine",
@@ -32,80 +32,80 @@ namespace SqlKata
             });
         }
 
-        public Query Union(Query query, bool all = false)
+        public QueryBuilder Union(QueryBuilder query, bool all = false)
         {
             return Combine("union", all, query);
         }
 
-        public Query UnionAll(Query query)
+        public QueryBuilder UnionAll(QueryBuilder query)
         {
             return Union(query, true);
         }
 
-        public Query Union(Func<Query, Query> callback, bool all = false)
+        public QueryBuilder Union(Func<QueryBuilder, QueryBuilder> callback, bool all = false)
         {
-            var query = callback.Invoke(new Query());
+            var query = callback.Invoke(new QueryBuilder());
             return Union(query, all);
         }
 
-        public Query UnionAll(Func<Query, Query> callback)
+        public QueryBuilder UnionAll(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Union(callback, true);
         }
 
-        public Query UnionRaw(string sql, params object[] bindings)
+        public QueryBuilder UnionRaw(string sql, params object[] bindings)
         {
             return CombineRaw(sql, bindings);
         }
 
-        public Query Except(Query query, bool all = false)
+        public QueryBuilder Except(QueryBuilder query, bool all = false)
         {
             return Combine("except", all, query);
         }
 
-        public Query ExceptAll(Query query)
+        public QueryBuilder ExceptAll(QueryBuilder query)
         {
             return Except(query, true);
         }
 
-        public Query Except(Func<Query, Query> callback, bool all = false)
+        public QueryBuilder Except(Func<QueryBuilder, QueryBuilder> callback, bool all = false)
         {
-            var query = callback.Invoke(new Query());
+            var query = callback.Invoke(new QueryBuilder());
             return Except(query, all);
         }
 
-        public Query ExceptAll(Func<Query, Query> callback)
+        public QueryBuilder ExceptAll(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Except(callback, true);
         }
 
-        public Query ExceptRaw(string sql, params object[] bindings)
+        public QueryBuilder ExceptRaw(string sql, params object[] bindings)
         {
             return CombineRaw(sql, bindings);
         }
 
-        public Query Intersect(Query query, bool all = false)
+        public QueryBuilder Intersect(QueryBuilder query, bool all = false)
         {
             return Combine("intersect", all, query);
         }
 
-        public Query IntersectAll(Query query)
+        public QueryBuilder IntersectAll(QueryBuilder query)
         {
             return Intersect(query, true);
         }
 
-        public Query Intersect(Func<Query, Query> callback, bool all = false)
+        public QueryBuilder Intersect(Func<QueryBuilder, QueryBuilder> callback, bool all = false)
         {
-            var query = callback.Invoke(new Query());
+            var query = callback.Invoke(new QueryBuilder());
             return Intersect(query, all);
         }
 
-        public Query IntersectAll(Func<Query, Query> callback)
+        public QueryBuilder IntersectAll(Func<QueryBuilder, QueryBuilder> callback)
         {
             return Intersect(callback, true);
         }
 
-        public Query IntersectRaw(string sql, params object[] bindings)
+        public QueryBuilder IntersectRaw(string sql, params object[] bindings)
         {
             return CombineRaw(sql, bindings);
         }

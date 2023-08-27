@@ -4,32 +4,32 @@ namespace SqlKata.Extensions
 {
     public static class QueryForExtensions
     {
-        public static Query ForFirebird(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForFirebird(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.Firebird, fn);
         }
 
-        public static Query ForMySql(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForMySql(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.MySql, fn);
         }
 
-        public static Query ForOracle(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForOracle(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.Oracle, fn);
         }
 
-        public static Query ForPostgreSql(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForPostgreSql(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.PostgreSql, fn);
         }
 
-        public static Query ForSqlite(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForSqlite(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.Sqlite, fn);
         }
 
-        public static Query ForSqlServer(this Query src, Func<Query, Query> fn)
+        public static JoinBuilder ForSqlServer(this JoinBuilder src, Func<JoinBuilder, JoinBuilder> fn)
         {
             return src.For(EngineCodes.SqlServer, fn);
         }

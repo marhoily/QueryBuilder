@@ -57,7 +57,8 @@ namespace SqlKata.Compilers
             }
 
             // handle CTEs
-            if (query.HasComponent("cte", compiler.EngineCode)) ctx = compiler.CompileCteQuery(ctx, query);
+            if (query.HasComponent("cte", compiler.EngineCode))
+                ctx = compiler.CompileCteQuery(ctx, query);
 
             ctx.RawSql = BindingExtensions.ExpandParameters(ctx.RawSql,
                 Compiler.ParameterPlaceholder, ctx.Bindings.ToArray());

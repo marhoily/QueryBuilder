@@ -16,7 +16,8 @@ namespace Program
             var query = db.Query("accounts")
                 .Where("balance", ">", 0)
                 .GroupBy("balance")
-                .Limit(10);
+                .Limit(10)
+                .Build();
 
             var accounts = query.Clone().Get();
             Console.WriteLine(JsonConvert.SerializeObject(accounts, Formatting.Indented));

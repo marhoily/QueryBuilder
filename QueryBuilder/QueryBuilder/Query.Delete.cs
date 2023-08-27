@@ -1,8 +1,8 @@
 namespace SqlKata
 {
-    public partial class Query
+    public partial class QueryBuilder
     {
-        public Query AsDelete()
+        public QueryBuilder AsDelete()
         {
             Method = "delete";
             return this;
